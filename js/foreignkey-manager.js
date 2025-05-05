@@ -18,7 +18,7 @@ class ForeignKeyManager {
         referenceTables.forEach(select => {
             const currentValue = select.value;
             // Vider les options actuelles
-            select.innerHTML = '<option value=\"\">--Sélectionner une table--</option>';
+            select.innerHTML = '<option value="">--Sélectionner une table--</option>';
             
             // Ajouter toutes les tables disponibles
             Object.values(this.schema.tables).forEach(table => {
@@ -29,7 +29,7 @@ class ForeignKeyManager {
             });
             
             // Restaurer la valeur si elle existe toujours
-            if (currentValue && select.querySelector(`option[value=\"${currentValue}\"]`)) {
+            if (currentValue && select.querySelector(`option[value="${currentValue}"]`)) {
                 select.value = currentValue;
                 
                 // Déclencher la mise à jour des colonnes
@@ -50,7 +50,7 @@ class ForeignKeyManager {
     updateReferenceColumns(tableSelect, columnSelect) {
         const tableId = tableSelect.value;
         if (!tableId) {
-            columnSelect.innerHTML = '<option value=\"\">--Sélectionner une colonne--</option>';
+            columnSelect.innerHTML = '<option value="">--Sélectionner une colonne--</option>';
             columnSelect.disabled = true;
             return;
         }
@@ -62,7 +62,7 @@ class ForeignKeyManager {
         const currentValue = columnSelect.value;
         
         // Réinitialiser et activer le sélecteur
-        columnSelect.innerHTML = '<option value=\"\">--Sélectionner une colonne--</option>';
+        columnSelect.innerHTML = '<option value="">--Sélectionner une colonne--</option>';
         columnSelect.disabled = false;
         
         // Ajouter uniquement les clés primaires comme options
@@ -76,7 +76,7 @@ class ForeignKeyManager {
             });
         
         // Restaurer la valeur si elle existe toujours
-        if (currentValue && columnSelect.querySelector(`option[value=\"${currentValue}\"]`)) {
+        if (currentValue && columnSelect.querySelector(`option[value="${currentValue}"]`)) {
             columnSelect.value = currentValue;
         }
     }
@@ -106,8 +106,8 @@ class ForeignKeyManager {
         
         if (!sourceTable || !targetTable || !sourceColumn || !targetColumn) return;
         
-        const sourceElement = document.querySelector(`#${relationship.sourceTable} .column-item[data-column-id=\"${relationship.sourceColumn}\"]`);
-        const targetElement = document.querySelector(`#${relationship.targetTable} .column-item[data-column-id=\"${relationship.targetColumn}\"]`);
+        const sourceElement = document.querySelector(`#${relationship.sourceTable} .column-item[data-column-id="${relationship.sourceColumn}"]`);
+        const targetElement = document.querySelector(`#${relationship.targetTable} .column-item[data-column-id="${relationship.targetColumn}"]`);
         
         if (!sourceElement || !targetElement) return;
         
@@ -162,7 +162,7 @@ class ForeignKeyManager {
         line.setAttribute('y2', endY);
         line.setAttribute('stroke', 'black');
         line.setAttribute('stroke-width', '2');
-        line.set('Attributemarker-end', 'url(#arrow)');
+        line.setAttribute('marker-end', 'url(#arrow)');
 
         // Ajouter la ligne SVG à la page
         const svg = document.getElementById('canvas');
