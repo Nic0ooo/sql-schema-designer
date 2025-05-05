@@ -132,34 +132,48 @@ main {
     overflow: auto;
     position: relative;
     background-color: var(--background-color);
-    background-image: radial-gradient(#ddd 1px, transparent 1px);
+    background-image: 
+        linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
     background-size: 20px 20px;
 }
 
-/* Tables */
-.table-card {
+/* Styles UML pour les tables */
+.table {
     position: absolute;
     min-width: 240px;
     background-color: var(--card-color);
-    border-radius: 8px;
+    border-radius: 4px;
     box-shadow: var(--shadow);
     cursor: move;
     user-select: none;
     z-index: 1;
+    border: 2px solid var(--primary-color);
+    overflow: hidden;
+    transition: box-shadow 0.2s ease, transform 0.05s ease;
 }
 
-.table-card:hover {
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+.table.dragging {
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    opacity: 0.9;
+    transform: scale(1.02);
+    z-index: 10;
 }
 
 .table-header {
     background-color: var(--primary-color);
     color: white;
     padding: 0.75rem 1rem;
-    border-radius: 8px 8px 0 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    border-bottom: 2px solid var(--primary-dark);
+}
+
+.table-title {
+    font-weight: bold;
+    font-size: 1.1rem;
+    text-transform: uppercase;
 }
 
 .table-actions {
@@ -169,34 +183,57 @@ main {
 
 .table-action-btn {
     color: white;
-    background-color: transparent;
+    background-color: rgba(255, 255, 255, 0.2);
     padding: 0.25rem;
-    font-size: 1rem;
+    font-size: 0.9rem;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: 4px;
-    width: 30px;
-    height: 30px;
+    width: 24px;
+    height: 24px;
 }
 
 .table-action-btn:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: rgba(255, 255, 255, 0.3);
 }
 
-.table-body {
-    padding: 1rem;
+.table-content {
+    padding: 0;
 }
 
+.column-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    border-top: 1px solid #eee;
+}
+
+/* Style UML pour les colonnes */
 .column-item {
-    padding: 0.5rem;
-    border-bottom: 1px solid var(--border-color);
     display: flex;
     justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-bottom: 1px solid #eee;
+    font-size: 0.9rem;
 }
 
 .column-item:last-child {
     border-bottom: none;
+}
+
+.column-item.primary-key {
+    background-color: rgba(52, 152, 219, 0.1);
+}
+
+.column-item.foreign-key {
+    background-color: rgba(46, 204, 113, 0.1);
+}
+
+.column-info {
+    display: flex;
+    flex-direction: column;
 }
 
 .column-name {
@@ -204,39 +241,87 @@ main {
 }
 
 .column-type {
-    color: #666;
-    font-size: 0.9rem;
+    color: #777;
+    font-size: 0.8rem;
+    margin-top: 2px;
 }
 
-.column-keys {
+.column-badges {
     display: flex;
     gap: 0.25rem;
 }
 
-.key-icon {
-    width: 16px;
-    height: 16px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+.badge {
+    display: inline-block;
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
     font-size: 0.7rem;
+    font-weight: bold;
     color: white;
-    border-radius: 2px;
 }
 
-.pk-icon {
+.badge.pk {
     background-color: var(--primary-color);
 }
 
-.fk-icon {
+.badge.fk {
     background-color: var(--secondary-color);
 }
 
-/* Relations (flèches) */
-.relation-line {
+/* Styles pour les relations */
+svg {
     position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     pointer-events: none;
     z-index: 0;
+}
+
+.relation-line {
+    stroke-width: 2px;
+    pointer-events: all;
+    cursor: pointer;
+}
+
+.relation-line:hover {
+    stroke-width: 3px;
+}
+
+.relation-line.one-to-many {
+    stroke-dasharray: none;
+}
+
+.relation-line.many-to-many {
+    stroke-dasharray: 5, 3;
+}
+
+.cardinality {
+    font-size: 12px;
+    font-weight: bold;
+    pointer-events: none;
+    user-select: none;
+}
+
+.anchor-point {
+    fill: var(--primary-color);
+    stroke: white;
+    stroke-width: 1px;
+    r: 4;
+    cursor: pointer;
+    pointer-events: all;
+}
+
+.anchor-point:hover {
+    r: 6;
+}
+
+/* Animation pour le déplacement */
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(52, 152, 219, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(52, 152, 219, 0); }
 }
 
 /* Modals */

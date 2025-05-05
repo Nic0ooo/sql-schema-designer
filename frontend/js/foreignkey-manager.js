@@ -1,12 +1,14 @@
 /**
  * Gestion des clés étrangères et des relations entre tables
+ * Version améliorée pour un rendu UML/MCD
  */
 
 class ForeignKeyManager {
-    constructor(schema, tableRenderer) {
+    constructor(schema, app) {
         this.schema = schema;
-        this.tableRenderer = tableRenderer;
-        this.relationLines = {};
+        this.app = app;
+        this.relationElements = {};
+        this.selectedRelation = null;
     }
 
     // Met à jour les options de tables et colonnes dans le formulaire
@@ -83,104 +85,250 @@ class ForeignKeyManager {
 
     // Crée les éléments visuels pour les relations
     renderRelationships() {
-        // D'abord, supprime toutes les lignes existantes
-        Object.values(this.relationLines).forEach(line => {
-            if (line && line.parentNode) {
-                line.parentNode.removeChild(line);
-            }
-        });
-        this.relationLines = {};
+        const svgElement = this.app.tableRenderer.svgElement;
+        if (!svgElement) return;
         
-        // Puis redessine toutes les relations
+        // Supprimer tous les éléments de relation existants
+        const existingRelations = svgElement.querySelectorAll('.relation-group');
+        existingRelations.forEach(el => el.remove());
+        
+        this.relationElements = {};
+        
+        // Redessiner toutes les relations
         Object.values(this.schema.relationships).forEach(rel => {
             this.renderRelationship(rel);
         });
     }
 
-    // Dessine une relation spécifique
+    // Dessine une relation spécifique avec style UML
     renderRelationship(relationship) {
         const sourceTable = this.schema.getTable(relationship.sourceTable);
         const targetTable = this.schema.getTable(relationship.targetTable);
-        const sourceColumn = this.schema.getColumnById(relationship.sourceTable, relationship.sourceColumn);
-        const targetColumn = this.schema.getColumnById(relationship.targetTable, relationship.targetColumn);
         
-        if (!sourceTable || !targetTable || !sourceColumn || !targetColumn) return;
+        if (!sourceTable || !targetTable) return;
         
-        const sourceElement = document.querySelector(`#${relationship.sourceTable} .column-item[data-column-id="${relationship.sourceColumn}"]`);
-        const targetElement = document.querySelector(`#${relationship.targetTable} .column-item[data-column-id="${relationship.targetColumn}"]`);
+        const sourceElement = document.getElementById(relationship.sourceTable);
+        const targetElement = document.getElementById(relationship.targetTable);
         
         if (!sourceElement || !targetElement) return;
         
-        // Calcul des positions pour la flèche
+        // Créer un groupe pour la relation
+        const relationGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        relationGroup.classList.add('relation-group');
+        relationGroup.setAttribute('data-relation-id', relationship.id);
+        
+        // Calculer les points de connexion
+        const connectionPoints = this.calculateConnectionPoints(sourceElement, targetElement);
+        
+        // Créer la ligne avec un style UML
+        const path = this.createRelationPath(connectionPoints);
+        path.classList.add('relation-line');
+        path.classList.add('one-to-many'); // Par défaut pour les clés étrangères
+        path.setAttribute('stroke', '#3498db');
+        
+        // Ajouter les points d'ancrage
+        const sourceAnchor = this.createAnchorPoint(connectionPoints.start.x, connectionPoints.start.y);
+        const targetAnchor = this.createAnchorPoint(connectionPoints.end.x, connectionPoints.end.y);
+        
+        // Ajouter les cardinalités
+        const sourceCardinality = this.createCardinalityText("1", connectionPoints.start.x, connectionPoints.start.y, connectionPoints.direction);
+        const targetCardinality = this.createCardinalityText("N", connectionPoints.end.x, connectionPoints.end.y, this.inverseDirection(connectionPoints.direction));
+        
+        // Ajouter tous les éléments au groupe
+        relationGroup.appendChild(path);
+        relationGroup.appendChild(sourceAnchor);
+        relationGroup.appendChild(targetAnchor);
+        relationGroup.appendChild(sourceCardinality);
+        relationGroup.appendChild(targetCardinality);
+        
+        // Ajouter le groupe au SVG
+        this.app.tableRenderer.svgElement.appendChild(relationGroup);
+        
+        // Stocker la référence
+        this.relationElements[relationship.id] = relationGroup;
+        
+        // Configuration des événements
+        this.setupRelationEvents(relationGroup, relationship);
+    }
+
+    // Calcule les meilleurs points de connexion entre deux tables
+    calculateConnectionPoints(sourceElement, targetElement) {
         const sourceRect = sourceElement.getBoundingClientRect();
         const targetRect = targetElement.getBoundingClientRect();
         const canvasRect = document.getElementById('canvas').getBoundingClientRect();
         
-        const sourceTableElement = document.getElementById(relationship.sourceTable);
-        const targetTableElement = document.getElementById(relationship.targetTable);
-        const sourceTableRect = sourceTableElement.getBoundingClientRect();
-        const targetTableRect = targetTableElement.getBoundingClientRect();
+        // Points centraux des tables
+        const sourceCenter = {
+            x: sourceRect.left + sourceRect.width / 2 - canvasRect.left,
+            y: sourceRect.top + sourceRect.height / 2 - canvasRect.top
+        };
         
-        // Points de départ et d'arrivée pour la flèche
-        const isSourceRightOfTarget = sourceTableRect.left > targetTableRect.right;
-        const isSourceLeftOfTarget = sourceTableRect.right < targetTableRect.left;
-        const isSourceBelowTarget = sourceTableRect.top > targetTableRect.bottom;
-        const isSourceAboveTarget = sourceTableRect.bottom < targetTableRect.top;
+        const targetCenter = {
+            x: targetRect.left + targetRect.width / 2 - canvasRect.left,
+            y: targetRect.top + targetRect.height / 2 - canvasRect.top
+        };
         
-        let startX, startY, endX, endY;
+        // Déterminer la direction principale de la connexion
+        let direction;
         
-        // Déterminer les points de départ et d'arrivée en fonction de la position relative des tables
-        if (isSourceRightOfTarget) {
-            startX = sourceTableRect.left - canvasRect.left;
-            endX = targetTableRect.right - canvasRect.left;
-        } else if (isSourceLeftOfTarget) {
-            startX = sourceTableRect.right - canvasRect.left;
-            endX = targetTableRect.left - canvasRect.left;
-        } else {
-            // Si les tables se chevauchent horizontalement
-            startX = (sourceTableRect.left + sourceTableRect.right) / 2 - canvasRect.left;
-            endX = (targetTableRect.left + targetTableRect.right) / 2 - canvasRect.left;
+        // Calculer l'angle entre les deux points centraux
+        const angle = Math.atan2(targetCenter.y - sourceCenter.y, targetCenter.x - sourceCenter.x) * 180 / Math.PI;
+        
+        // Déterminer la direction en fonction de l'angle
+        if (angle > -45 && angle <= 45) direction = 'right';
+        else if (angle > 45 && angle <= 135) direction = 'bottom';
+        else if (angle > 135 || angle <= -135) direction = 'left';
+        else direction = 'top';
+        
+        let start, end;
+        
+        // Déterminer les points de départ et d'arrivée en fonction de la direction
+        switch(direction) {
+            case 'right':
+                start = {
+                    x: sourceRect.right - canvasRect.left,
+                    y: sourceCenter.y
+                };
+                end = {
+                    x: targetRect.left - canvasRect.left,
+                    y: targetCenter.y
+                };
+                break;
+            case 'left':
+                start = {
+                    x: sourceRect.left - canvasRect.left,
+                    y: sourceCenter.y
+                };
+                end = {
+                    x: targetRect.right - canvasRect.left,
+                    y: targetCenter.y
+                };
+                break;
+            case 'bottom':
+                start = {
+                    x: sourceCenter.x,
+                    y: sourceRect.bottom - canvasRect.top
+                };
+                end = {
+                    x: targetCenter.x,
+                    y: targetRect.top - canvasRect.top
+                };
+                break;
+            case 'top':
+                start = {
+                    x: sourceCenter.x,
+                    y: sourceRect.top - canvasRect.top
+                };
+                end = {
+                    x: targetCenter.x,
+                    y: targetRect.bottom - canvasRect.top
+                };
+                break;
         }
         
-        if (isSourceBelowTarget) {
-            startY = sourceTableRect.top - canvasRect.top;
-            endY = targetTableRect.bottom - canvasRect.top;
-        } else if (isSourceAboveTarget) {
-            startY = sourceTableRect.bottom - canvasRect.top;
-            endY = targetTableRect.top - canvasRect.top;
-        } else {
-            // Si les tables se chevauchent verticalement
-            startY = sourceRect.top + sourceRect.height / 2 - canvasRect.top;
-            endY = targetRect.top + targetRect.height / 2 - canvasRect.top;
+        return { start, end, direction };
+    }
+    
+    // Crée un chemin SVG pour la relation
+    createRelationPath(points) {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        
+        // Créer une ligne droite entre les points
+        const d = `M ${points.start.x} ${points.start.y} L ${points.end.x} ${points.end.y}`;
+        
+        path.setAttribute('d', d);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('marker-end', 'url(#arrow)');
+        
+        return path;
+    }
+    
+    // Crée un point d'ancrage pour la relation
+    createAnchorPoint(x, y) {
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.classList.add('anchor-point');
+        circle.setAttribute('cx', x);
+        circle.setAttribute('cy', y);
+        
+        return circle;
+    }
+    
+    // Crée un texte de cardinalité
+    createCardinalityText(text, x, y, direction) {
+        const textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        textElement.classList.add('cardinality');
+        textElement.textContent = text;
+        
+        // Positionner le texte en fonction de la direction
+        let offsetX = 0;
+        let offsetY = 0;
+        
+        switch(direction) {
+            case 'right':
+                offsetX = 10;
+                break;
+            case 'left':
+                offsetX = -10;
+                textElement.setAttribute('text-anchor', 'end');
+                break;
+            case 'bottom':
+                offsetY = 15;
+                textElement.setAttribute('text-anchor', 'middle');
+                break;
+            case 'top':
+                offsetY = -10;
+                textElement.setAttribute('text-anchor', 'middle');
+                break;
         }
         
-        // Créer une ligne SVG pour la relation
-        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-        line.setAttribute('x1', startX);
-        line.setAttribute('y1', startY);
-        line.setAttribute('x2', endX);
-        line.setAttribute('y2', endY);
-        line.setAttribute('stroke', 'black');
-        line.setAttribute('stroke-width', '2');
-        line.setAttribute('marker-end', 'url(#arrow)');
-
-        // Ajouter la ligne SVG à la page
-        const svg = document.getElementById('canvas');
-        svg.appendChild(line);
+        textElement.setAttribute('x', x + offsetX);
+        textElement.setAttribute('y', y + offsetY);
         
-        // Ajouter un écouteur d'événements pour la relation
-        line.addEventListener('mouseover', function() {
-            line.setAttribute('stroke', 'red');
+        return textElement;
+    }
+    
+    // Renvoie la direction opposée
+    inverseDirection(direction) {
+        switch(direction) {
+            case 'right': return 'left';
+            case 'left': return 'right';
+            case 'top': return 'bottom';
+            case 'bottom': return 'top';
+            default: return direction;
+        }
+    }
+    
+    // Configure les événements pour les relations
+    setupRelationEvents(relationGroup, relationship) {
+        const path = relationGroup.querySelector('path');
+        
+        // Survol
+        relationGroup.addEventListener('mouseover', () => {
+            path.setAttribute('stroke-width', '3');
+            path.setAttribute('stroke', '#e74c3c');
         });
         
-        line.addEventListener('mouseout', function() {
-            line.setAttribute('stroke', 'black');
+        relationGroup.addEventListener('mouseout', () => {
+            if (this.selectedRelation !== relationship.id) {
+                path.setAttribute('stroke-width', '2');
+                path.setAttribute('stroke', '#3498db');
+            }
         });
         
-        line.addEventListener('click', function() {
-            // Gérer l'événement de clic sur la ligne
-            // Par exemple, vous pouvez afficher un message ou effectuer une actionspécifique
-            console.log('Relation cliquée');
+        // Sélection
+        relationGroup.addEventListener('click', () => {
+            // Désélectionner la relation précédente
+            if (this.selectedRelation && this.relationElements[this.selectedRelation]) {
+                const prevPath = this.relationElements[this.selectedRelation].querySelector('path');
+                prevPath.setAttribute('stroke-width', '2');
+                prevPath.setAttribute('stroke', '#3498db');
+            }
+            
+            // Sélectionner la nouvelle relation
+            this.selectedRelation = relationship.id;
+            path.setAttribute('stroke-width', '3');
+            path.setAttribute('stroke', '#e74c3c');
         });
     }
 }
