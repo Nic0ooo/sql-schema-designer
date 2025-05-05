@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  frontend:
+    build: ./frontend
+    container_name: sql-schema-frontend
+    ports:
+      - "8080:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+    depends_on:
+      - backend
+    networks:
+      - sql-schema-network
+
+  backend:
+    build: ./backend
+    container_name: sql-schema-backend
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/sql_schema_designer
+    volumes:
+      - ./backend:/app
+    depends_on:
+      - postgres
+    networks:
+      - sql-schema-network
+
+  postgres:
+    build: ./postgres
+    container_name: sql-schema-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=sql_schema_designer
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - sql-schema-network
+
+networks:
+  sql-schema-network:
+    driver: bridge
+    name: sql-schema-network
+
+volumes:
+  pgdata:
