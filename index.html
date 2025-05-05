@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang=\"fr\">
+<head>
+    <meta charset=\"UTF-8\">
+    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+    <title>SQL Schema Designer</title>
+    <link rel=\"stylesheet\" href=\"styles.css\">
+</head>
+<body>
+    <div class=\"app-container\">
+        <header>
+            <h1>SQL Schema Designer</h1>
+            <div class=\"header-actions\">
+                <button id=\"add-table-btn\" class=\"primary-btn\">Ajouter une Table</button>
+                <button id=\"export-sql-btn\" class=\"secondary-btn\">Exporter SQL (PostgreSQL)</button>
+            </div>
+        </header>
+
+        <main>
+            <div id=\"canvas\" class=\"canvas\">
+                <!-- Les tables seront ajoutées ici dynamiquement -->
+            </div>
+        </main>
+
+        <!-- Modal pour ajouter/éditer une table -->
+        <div id=\"table-modal\" class=\"modal\">
+            <div class=\"modal-content\">
+                <div class=\"modal-header\">
+                    <h2 id=\"modal-title\">Ajouter une Table</h2>
+                    <span class=\"close\">&times;</span>
+                </div>
+                <div class=\"modal-body\">
+                    <form id=\"table-form\">
+                        <div class=\"form-group\">
+                            <label for=\"table-name\">Nom de la Table:</label>
+                            <input type=\"text\" id=\"table-name\" required>
+                        </div>
+                        
+                        <div class=\"form-group\">
+                            <h3>Colonnes</h3>
+                            <div id=\"columns-container\">
+                                <!-- Les colonnes seront ajoutées ici dynamiquement -->
+                            </div>
+                            <button type=\"button\" id=\"add-column-btn\" class=\"secondary-btn\">Ajouter une Colonne</button>
+                        </div>
+                        
+                        <div class=\"form-actions\">
+                            <button type=\"submit\" class=\"primary-btn\">Sauvegarder</button>
+                            <button type=\"button\" class=\"cancel-btn close-modal\">Annuler</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal pour afficher le code SQL -->
+        <div id=\"sql-modal\" class=\"modal\">
+            <div class=\"modal-content\">
+                <div class=\"modal-header\">
+                    <h2>Code SQL (PostgreSQL)</h2>
+                    <span class=\"close\">&times;</span>
+                </div>
+                <div class=\"modal-body\">
+                    <pre id=\"sql-output\"></pre>
+                    <div class=\"form-actions\">
+                        <button id=\"copy-sql-btn\" class=\"primary-btn\">Copier</button>
+                        <button class=\"cancel-btn close-modal\">Fermer</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Template pour une colonne dans le formulaire -->
+        <template id=\"column-template\">
+            <div class=\"column-row\">
+                <div class=\"column-field\">
+                    <input type=\"text\" class=\"column-name\" placeholder=\"Nom de la colonne\" required>
+                </div>
+                <div class=\"column-field\">
+                    <select class=\"column-type\">
+                        <option value=\"INTEGER\">INTEGER</option>
+                        <option value=\"BIGINT\">BIGINT</option>
+                        <option value=\"SMALLINT\">SMALLINT</option>
+                        <option value=\"DECIMAL\">DECIMAL</option>
+                        <option value=\"NUMERIC\">NUMERIC</option>
+                        <option value=\"REAL\">REAL</option>
+                        <option value=\"DOUBLE PRECISION\">DOUBLE PRECISION</option>
+                        <option value=\"VARCHAR\">VARCHAR</option>
+                        <option value=\"CHAR\">CHAR</option>
+                        <option value=\"TEXT\">TEXT</option>
+                        <option value=\"DATE\">DATE</option>
+                        <option value=\"TIME\">TIME</option>
+                        <option value=\"TIMESTAMP\">TIMESTAMP</option>
+                        <option value=\"BOOLEAN\">BOOLEAN</option>
+                        <option value=\"UUID\">UUID</option>
+                        <option value=\"JSON\">JSON</option>
+                        <option value=\"JSONB\">JSONB</option>
+                    </select>
+                </div>
+                <div class=\"column-options\">
+                    <label>
+                        <input type=\"checkbox\" class=\"primary-key\"> Clé Primaire
+                    </label>
+                    <label>
+                        <input type=\"checkbox\" class=\"foreign-key\"> Clé Étrangère
+                    </label>
+                </div>
+                <div class=\"foreign-key-options hidden\">
+                    <select class=\"reference-table\">
+                        <option value=\"\">--Sélectionner une table--</option>
+                    </select>
+                    <select class=\"reference-column\">
+                        <option value=\"\">--Sélectionner une colonne--</option>
+                    </select>
+                </div>
+                <button type=\"button\" class=\"remove-column-btn\">×</button>
+            </div>
+        </template>
+    </div>
+
+    <script src=\"js/models.js\"></script>
+    <script src=\"js/foreignkey-manager.js\"></script>
+    <script src=\"js/table-renderer.js\"></script>
+    <script src=\"js/sql-generator.js\"></script>
+    <script src=\"js/app.js\"></script>
+</body>
+</html>
