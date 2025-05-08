@@ -288,15 +288,23 @@ class App {
         
         // Créer ou mettre à jour la table
         let table;
+        let isNewTable = false;
         
         if (this.currentEditingTable) {
-            // Mode édition
+            // Mode édition - conserver les coordonnées x, y et l'échelle
             table = this.currentEditingTable;
+            const oldName = table.name;
             table.name = tableName;
             
             // Supprimer toutes les anciennes colonnes et relations
             while (table.columns.length > 0) {
                 this.schema.removeColumn(table.id, table.columns[0].id);
+            }
+            
+            // Supprimer l'élément DOM de la table existante pour éviter le doublon
+            const existingTableElement = document.getElementById(table.id);
+            if (existingTableElement) {
+                existingTableElement.remove();
             }
         } else {
             // Mode création - générer une position aléatoire sur le canvas
@@ -307,6 +315,7 @@ class App {
             const y = Math.floor(Math.random() * canvasHeight);
             
             table = this.schema.createTable(tableName, x, y);
+            isNewTable = true;
         }
         
         // Ajouter les nouvelles colonnes

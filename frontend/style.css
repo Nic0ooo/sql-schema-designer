@@ -192,6 +192,9 @@ main {
     border-radius: 4px;
     width: 24px;
     height: 24px;
+    transform-origin: center;
+    /* Nouvelle propriété pour assurer une taille constante malgré le zoom */
+    transform: scale(var(--button-scale, 1));
 }
 
 .table-action-btn:hover {
@@ -487,6 +490,53 @@ pre {
 
 .status-unsaved {
     background-color: var(--danger-color);
+}
+
+/* Styles pour les contrôles de zoom */
+.zoom-controls {
+    position: fixed;  /* Position fixe au lieu de absolue */
+    bottom: 20px;
+    right: 20px;
+    background-color: white;
+    border-radius: 4px;
+    box-shadow: var(--shadow);
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    z-index: 50;
+}
+
+.zoom-btn {
+    width: 32px;
+    height: 32px;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 0;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--background-color);
+    color: var(--primary-color);
+    border: 1px solid var(--border-color);
+}
+
+.zoom-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+.zoom-reset {
+    font-size: 16px;
+}
+
+#zoom-level {
+    padding: 0 10px;
+    font-size: 14px;
+    font-weight: 500;
+    user-select: none;
+    min-width: 60px;
+    text-align: center;
 }
 
 /* Media Queries */

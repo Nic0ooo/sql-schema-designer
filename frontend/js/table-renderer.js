@@ -14,12 +14,23 @@ class TableRenderer {
         this.initialMouseX = 0;
         this.initialMouseY = 0;
         this.isDragging = false;
+        this.zoomLevel = 1;  // Niveau de zoom initial (100%)
+        
+        // Nouvelles propriétés pour le déplacement du canvas
+        this.canvasOffsetX = 0; // Décalage horizontal du canvas
+        this.canvasOffsetY = 0; // Décalage vertical du canvas
+        this.isPanning = false; // État du déplacement
+        this.lastPanPointX = 0; // Dernière position X pour le déplacement
+        this.lastPanPointY = 0; // Dernière position Y pour le déplacement
         
         // Initialiser le SVG pour les relations
         this.initSVG();
         
         // Ajouter un gestionnaire d'événements pour le zoom
         this.setupZoom();
+        
+        // Ajouter un gestionnaire d'événements pour le déplacement du canvas
+        this.setupPanning();
     }
     
     // Initialiser l'élément SVG pour dessiner les relations
@@ -49,8 +60,8 @@ class TableRenderer {
         arrowMarker.setAttribute('viewBox', '0 0 10 10');
         arrowMarker.setAttribute('refX', '8');
         arrowMarker.setAttribute('refY', '5');
-        arrowMarker.setAttribute('markerWidth', '8');
-        arrowMarker.setAttribute('markerHeight', '8');
+        arrowMarker.setAttribute('markerWidth', `${8 / this.zoomLevel}`);
+        arrowMarker.setAttribute('markerHeight', `${8 / this.zoomLevel}`);
         arrowMarker.setAttribute('orient', 'auto-start-reverse');
         
         const arrowPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -65,8 +76,8 @@ class TableRenderer {
         diamondMarker.setAttribute('viewBox', '0 0 10 10');
         diamondMarker.setAttribute('refX', '5');
         diamondMarker.setAttribute('refY', '5');
-        diamondMarker.setAttribute('markerWidth', '10');
-        diamondMarker.setAttribute('markerHeight', '10');
+        diamondMarker.setAttribute('markerWidth', `${10 / this.zoomLevel}`);
+        diamondMarker.setAttribute('markerHeight', `${10 / this.zoomLevel}`);
         diamondMarker.setAttribute('orient', 'auto');
         
         const diamondPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -88,49 +99,168 @@ class TableRenderer {
 
     // Configuration du zoom sur le canvas
     setupZoom() {
+        // Éléments de l'interface utilisateur pour le zoom
+        const zoomInBtn = document.getElementById('zoom-in-btn');
+        const zoomOutBtn = document.getElementById('zoom-out-btn');
+        const zoomResetBtn = document.getElementById('zoom-reset-btn');
+        const zoomLevelDisplay = document.getElementById('zoom-level');
+
+        // Fonction pour mettre à jour l'affichage du niveau de zoom
+        const updateZoomDisplay = () => {
+            zoomLevelDisplay.textContent = `${Math.round(this.zoomLevel * 100)}%`;
+        };
+
+        // Fonction pour appliquer le zoom aux tables
+        const applyZoom = (delta, centerX, centerY) => {
+            // Nouvelle valeur de zoom
+            const newZoom = Math.max(0.2, Math.min(3, this.zoomLevel * delta));
+            const zoomFactor = newZoom / this.zoomLevel;
+            
+            // Mettre à jour le niveau de zoom
+            this.zoomLevel = newZoom;
+            
+            // Mise à jour de l'affichage
+            updateZoomDisplay();
+            
+            // Appliquer le zoom à toutes les tables
+            const tables = this.canvas.querySelectorAll('.table');
+            tables.forEach(table => {
+                // Obtenir la position actuelle
+                const rect = table.getBoundingClientRect();
+                const canvasRect = this.canvas.getBoundingClientRect();
+                
+                // Si pas de centre spécifié, utiliser le centre du canvas
+                const zoomCenterX = centerX !== undefined ? centerX : canvasRect.width / 2;
+                const zoomCenterY = centerY !== undefined ? centerY : canvasRect.height / 2;
+                
+                // Position relative au centre du zoom
+                const relX = rect.left - canvasRect.left - zoomCenterX;
+                const relY = rect.top - canvasRect.top - zoomCenterY;
+                
+                // Appliquer le zoom
+                const newX = zoomCenterX + relX * zoomFactor;
+                const newY = zoomCenterY + relY * zoomFactor;
+                
+                // Mettre à jour la position
+                table.style.left = `${newX}px`;
+                table.style.top = `${newY}px`;
+                
+                // Mettre à jour la taille
+                const currScale = parseFloat(table.style.transform?.match(/scale\(([^)]+)\)/)?.[1] || '1');
+                const newScale = currScale * zoomFactor;
+                table.style.transform = `scale(${newScale})`;
+                
+                // Ajuster l'échelle des boutons pour qu'ils restent de taille constante
+                const buttonScale = 1 / newScale;
+                const actionButtons = table.querySelectorAll('.table-action-btn');
+                actionButtons.forEach(btn => {
+                    btn.style.setProperty('--button-scale', buttonScale);
+                });
+                
+                // Mettre à jour la position et l'échelle dans le modèle
+                const tableId = table.id;
+                const tableObj = this.schema.getTable(tableId);
+                if (tableObj) {
+                    tableObj.x = newX;
+                    tableObj.y = newY;
+                    tableObj.scale = newScale;
+                }
+            });
+            
+            // Mettre à jour les relations
+            if (window.foreignKeyManager) {
+                window.foreignKeyManager.renderRelationships();
+            }
+        };
+
+        // Gestionnaire pour le zoom avec la molette de la souris
         this.canvas.addEventListener('wheel', (e) => {
             if (e.ctrlKey) {
                 // Empêcher le zoom par défaut du navigateur
                 e.preventDefault();
                 
-                // Facteur de zoom: positif pour zoom avant, négatif pour zoom arrière
+                // Facteur de zoom: positif pour zoom arrière, négatif pour zoom avant
                 const delta = e.deltaY > 0 ? 0.9 : 1.1;
                 
-                // Appliquer le zoom aux tables
+                // Position de la souris comme centre du zoom
+                const canvasRect = this.canvas.getBoundingClientRect();
+                const mouseX = e.clientX - canvasRect.left;
+                const mouseY = e.clientY - canvasRect.top;
+                
+                // Appliquer le zoom
+                applyZoom(delta, mouseX, mouseY);
+            }
+        }, { passive: false });
+
+        // Gestionnaire pour le bouton zoom avant
+        zoomInBtn.addEventListener('click', () => {
+            applyZoom(1.2); // +20% de zoom
+        });
+
+        // Gestionnaire pour le bouton zoom arrière
+        zoomOutBtn.addEventListener('click', () => {
+            applyZoom(0.8); // -20% de zoom
+        });
+
+        // Gestionnaire pour le bouton réinitialiser le zoom
+        zoomResetBtn.addEventListener('click', () => {
+            // Calculer le facteur de zoom pour retourner à 100%
+            const resetFactor = 1 / this.zoomLevel;
+            applyZoom(resetFactor);
+        });
+
+        // Initialisation de l'affichage
+        updateZoomDisplay();
+    }
+
+    // Configuration du déplacement (pan) dans le canvas
+    setupPanning() {
+        // Gestionnaire pour le début du déplacement (clic droit ou clic de la molette)
+        this.canvas.addEventListener('mousedown', (e) => {
+            // Activer le déplacement avec le bouton droit (2) ou le clic de la molette (1)
+            if (e.button === 2 || e.button === 1) {
+                e.preventDefault();
+                
+                // Marquer le début du déplacement
+                this.isPanning = true;
+                this.lastPanPointX = e.clientX;
+                this.lastPanPointY = e.clientY;
+                
+                // Changer le curseur pour indiquer le mode déplacement
+                this.canvas.style.cursor = 'grabbing';
+            }
+        });
+        
+        // Gestionnaire pour le déplacement du canvas
+        this.canvas.addEventListener('mousemove', (e) => {
+            if (this.isPanning) {
+                // Calculer le delta de déplacement
+                const deltaX = e.clientX - this.lastPanPointX;
+                const deltaY = e.clientY - this.lastPanPointY;
+                
+                // Mettre à jour les points de référence
+                this.lastPanPointX = e.clientX;
+                this.lastPanPointY = e.clientY;
+                
+                // Mettre à jour le décalage global du canvas
+                this.canvasOffsetX += deltaX;
+                this.canvasOffsetY += deltaY;
+                
+                // Déplacer toutes les tables
                 const tables = this.canvas.querySelectorAll('.table');
                 tables.forEach(table => {
-                    // Obtenir la position actuelle
-                    const rect = table.getBoundingClientRect();
-                    const canvasRect = this.canvas.getBoundingClientRect();
+                    const currentX = parseInt(table.style.left) || 0;
+                    const currentY = parseInt(table.style.top) || 0;
                     
-                    // Point central du canvas
-                    const centerX = canvasRect.width / 2;
-                    const centerY = canvasRect.height / 2;
-                    
-                    // Position relative au centre du canvas
-                    const relX = rect.left - canvasRect.left - centerX;
-                    const relY = rect.top - canvasRect.top - centerY;
-                    
-                    // Appliquer le zoom
-                    const newX = centerX + relX * delta;
-                    const newY = centerY + relY * delta;
-                    
-                    // Mettre à jour la position
-                    table.style.left = `${newX}px`;
-                    table.style.top = `${newY}px`;
-                    
-                    // Mettre à jour la taille
-                    const currScale = parseFloat(table.style.transform?.match(/scale\(([^)]+)\)/)?.[1] || '1');
-                    const newScale = currScale * delta;
-                    table.style.transform = `scale(${newScale})`;
+                    table.style.left = `${currentX + deltaX}px`;
+                    table.style.top = `${currentY + deltaY}px`;
                     
                     // Mettre à jour la position dans le modèle
                     const tableId = table.id;
                     const tableObj = this.schema.getTable(tableId);
                     if (tableObj) {
-                        tableObj.x = newX;
-                        tableObj.y = newY;
-                        tableObj.scale = newScale;
+                        tableObj.x = currentX + deltaX;
+                        tableObj.y = currentY + deltaY;
                     }
                 });
                 
@@ -139,7 +269,28 @@ class TableRenderer {
                     window.foreignKeyManager.renderRelationships();
                 }
             }
-        }, { passive: false });
+        });
+        
+        // Gestionnaire pour la fin du déplacement
+        document.addEventListener('mouseup', (e) => {
+            if (this.isPanning) {
+                this.isPanning = false;
+                this.canvas.style.cursor = 'default';
+            }
+        });
+        
+        // Désactiver le menu contextuel pour permettre le déplacement avec le clic droit
+        this.canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+        
+        // Gestionnaire pour quitter la zone du canvas
+        this.canvas.addEventListener('mouseleave', () => {
+            if (this.isPanning) {
+                this.isPanning = false;
+                this.canvas.style.cursor = 'default';
+            }
+        });
     }
 
     // Rendre toutes les tables
@@ -169,9 +320,12 @@ class TableRenderer {
         // Appliquer l'échelle si définie
         if (table.scale) {
             tableElement.style.transform = `scale(${table.scale})`;
+            // Calculer l'échelle inverse pour les boutons d'action
+            const buttonScale = 1 / table.scale;
+            tableElement.style.setProperty('--button-scale', buttonScale);
         }
         
-        // Créer l'en-tête de la table
+        // Créer l'en-tête de la table avec les boutons d'action
         const header = document.createElement('div');
         header.className = 'table-header';
         
@@ -184,19 +338,13 @@ class TableRenderer {
         
         const editBtn = document.createElement('button');
         editBtn.className = 'table-action-btn edit-table-btn';
-        editBtn.innerHTML = '<i class="fas fa-edit"></i>';
         editBtn.title = 'Modifier la table';
-        if (!editBtn.querySelector('i')) {
-            editBtn.textContent = '✏️';
-        }
+        editBtn.textContent = '✏️';
         
         const deleteBtn = document.createElement('button');
         deleteBtn.className = 'table-action-btn delete-table-btn';
-        deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
         deleteBtn.title = 'Supprimer la table';
-        if (!deleteBtn.querySelector('i')) {
-            deleteBtn.textContent = '🗑️';
-        }
+        deleteBtn.textContent = '🗑️';
         
         actions.appendChild(editBtn);
         actions.appendChild(deleteBtn);
@@ -204,37 +352,31 @@ class TableRenderer {
         header.appendChild(title);
         header.appendChild(actions);
         
-        // Créer le contenu de la table dans un style UML
+        // Créer le contenu de la table
         const content = document.createElement('div');
         content.className = 'table-content';
         
-        // Séparer les colonnes en sections (clés primaires, attributs, clés étrangères)
+        // Colonnes séparées par type
         const primaryColumns = table.columns.filter(col => col.isPrimaryKey);
         const foreignColumns = table.columns.filter(col => col.isForeignKey && !col.isPrimaryKey);
         const regularColumns = table.columns.filter(col => !col.isPrimaryKey && !col.isForeignKey);
         
-        // Liste des colonnes
         const columnList = document.createElement('ul');
         columnList.className = 'column-list';
         
-        // Ajouter les colonnes en sections
         this.addColumnsToList(primaryColumns, columnList, 'primary-keys');
         this.addColumnsToList(regularColumns, columnList, 'regular-attributes');
         this.addColumnsToList(foreignColumns, columnList, 'foreign-keys');
         
         content.appendChild(columnList);
         
-        // Assembler la table
+        // Assembler et ajouter la table
         tableElement.appendChild(header);
         tableElement.appendChild(content);
-        
-        // Ajouter la table au canvas
         this.canvas.appendChild(tableElement);
         
-        // Ajouter les écouteurs d'événements pour le déplacement
+        // Configuration des interactions
         this.setupDraggable(tableElement, header);
-        
-        // Configurer les boutons d'action
         this.setupTableActions(tableElement, table.id);
     }
     

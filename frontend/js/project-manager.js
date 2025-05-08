@@ -219,9 +219,20 @@ class ProjectManager {
         }
         
         try {
+            // S'assurer que les positions et échelles actuelles des tables sont à jour
+            // en récupérant les informations depuis le DOM
+            this.updateTablePositionsFromDOM();
+            
             // Convertir le schéma actuel en données à envoyer
             const schemaData = {
-                tables: Object.values(this.app.schema.tables),
+                tables: Object.values(this.app.schema.tables).map(table => ({
+                    ...table,
+                    // Assurer que les coordonnées x et y sont incluses
+                    x: table.x || 0,
+                    y: table.y || 0,
+                    // Inclure l'échelle si elle existe
+                    scale: table.scale || 1
+                })),
                 relationships: Object.values(this.app.schema.relationships)
             };
             
@@ -243,6 +254,27 @@ class ProjectManager {
             console.error('Erreur lors de la sauvegarde du projet:', error);
             alert('Impossible de sauvegarder le projet. Veuillez réessayer.');
         }
+    }
+    
+    // Nouvelle méthode pour mettre à jour les positions des tables depuis le DOM
+    updateTablePositionsFromDOM() {
+        Object.values(this.app.schema.tables).forEach(table => {
+            const tableElement = document.getElementById(table.id);
+            if (tableElement) {
+                // Récupérer la position actuelle
+                table.x = parseInt(tableElement.style.left) || table.x || 0;
+                table.y = parseInt(tableElement.style.top) || table.y || 0;
+                
+                // Récupérer l'échelle si elle existe
+                const transformValue = tableElement.style.transform;
+                if (transformValue && transformValue.includes('scale')) {
+                    const scaleMatch = transformValue.match(/scale\(([^)]+)\)/);
+                    if (scaleMatch && scaleMatch[1]) {
+                        table.scale = parseFloat(scaleMatch[1]) || 1;
+                    }
+                }
+            }
+        });
     }
     
     // Conversion des données du projet en schéma pour l'application

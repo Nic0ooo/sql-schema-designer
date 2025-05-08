@@ -157,6 +157,9 @@ class ForeignKeyManager {
         const targetRect = targetElement.getBoundingClientRect();
         const canvasRect = document.getElementById('canvas').getBoundingClientRect();
         
+        // Récupérer le niveau de zoom actuel
+        const zoomLevel = this.app.tableRenderer.zoomLevel;
+        
         // Points centraux des tables
         const sourceCenter = {
             x: sourceRect.left + sourceRect.width / 2 - canvasRect.left,
@@ -181,6 +184,10 @@ class ForeignKeyManager {
         else direction = 'top';
         
         let start, end;
+        
+        // Obtenir les dimensions des tables en tenant compte des transformations CSS
+        const sourceScale = parseFloat(sourceElement.style.transform?.match(/scale\(([^)]+)\)/)?.[1] || '1');
+        const targetScale = parseFloat(targetElement.style.transform?.match(/scale\(([^)]+)\)/)?.[1] || '1');
         
         // Déterminer les points de départ et d'arrivée en fonction de la direction
         switch(direction) {
@@ -233,12 +240,20 @@ class ForeignKeyManager {
     createRelationPath(points) {
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         
+        // Récupérer le niveau de zoom actuel pour ajuster la visibilité des relations
+        const zoomLevel = this.app.tableRenderer.zoomLevel;
+        
         // Créer une ligne droite entre les points
         const d = `M ${points.start.x} ${points.start.y} L ${points.end.x} ${points.end.y}`;
         
         path.setAttribute('d', d);
         path.setAttribute('fill', 'none');
-        path.setAttribute('stroke-width', '2');
+        
+        // Ajuster l'épaisseur de la ligne en fonction du zoom
+        const strokeWidth = Math.max(1, 2 / zoomLevel);
+        path.setAttribute('stroke-width', strokeWidth);
+        
+        // Ajuster les marqueurs de fin en fonction du zoom
         path.setAttribute('marker-end', 'url(#arrow)');
         
         return path;
