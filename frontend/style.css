@@ -420,6 +420,42 @@ input[type="text"]:focus, select:focus, textarea:focus {
     background-color: #f9f9f9;
     border-radius: 4px;
     margin-bottom: 0.5rem;
+    transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+}
+
+/* Style de la poignée de glisser-déposer */
+.column-drag-handle {
+    cursor: grab;
+    padding: 0 8px;
+    color: #999;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    transition: color 0.2s ease;
+    margin-right: 4px;
+}
+
+.column-drag-handle:hover {
+    color: #555;
+}
+
+/* Style pour l'élément en cours de déplacement */
+.column-row.dragging {
+    background-color: #f5f5f5;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+    cursor: grabbing;
+    opacity: 0.9;
+    z-index: 1000;
+}
+
+/* Style pour le placeholder */
+.column-row-placeholder {
+    border: 2px dashed #ccc;
+    border-radius: 4px;
+    background-color: rgba(200, 200, 200, 0.1);
+    margin: 4px 0;
 }
 
 .column-field {

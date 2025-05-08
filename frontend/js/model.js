@@ -41,6 +41,44 @@ class Table {
     getForeignKeys() {
         return this.columns.filter(col => col.isForeignKey);
     }
+    
+    // Méthode pour réorganiser une colonne à une nouvelle position
+    moveColumn(columnId, newIndex) {
+        // Trouver l'index actuel de la colonne
+        const currentIndex = this.columns.findIndex(col => col.id === columnId);
+        if (currentIndex === -1) return false;
+        
+        // Vérifier que le nouvel index est valide
+        if (newIndex < 0 || newIndex >= this.columns.length) return false;
+        
+        // Extraire la colonne
+        const column = this.columns[currentIndex];
+        
+        // Supprimer la colonne de sa position actuelle
+        this.columns.splice(currentIndex, 1);
+        
+        // Insérer la colonne à sa nouvelle position
+        this.columns.splice(newIndex, 0, column);
+        
+        return true;
+    }
+    
+    // Méthode pour mettre à jour l'ordre complet des colonnes
+    updateColumnsOrder(orderedColumnIds) {
+        // Vérifier que tous les IDs fournis correspondent à des colonnes existantes
+        if (orderedColumnIds.length !== this.columns.length) return false;
+        if (!orderedColumnIds.every(id => this.columns.some(col => col.id === id))) return false;
+        
+        // Créer un nouvel ordre de colonnes
+        const newOrder = orderedColumnIds.map(id => 
+            this.columns.find(col => col.id === id)
+        );
+        
+        // Mettre à jour les colonnes
+        this.columns = newOrder;
+        
+        return true;
+    }
 }
 
 class Relationship {
@@ -139,5 +177,21 @@ class Schema {
         const table = this.getTable(tableId);
         if (!table) return null;
         return table.columns.find(col => col.id === columnId);
+    }
+    
+    // Réorganiser une colonne à une nouvelle position dans la table
+    moveColumn(tableId, columnId, newIndex) {
+        const table = this.getTable(tableId);
+        if (!table) return false;
+        
+        return table.moveColumn(columnId, newIndex);
+    }
+    
+    // Mettre à jour l'ordre complet des colonnes dans une table
+    updateColumnsOrder(tableId, orderedColumnIds) {
+        const table = this.getTable(tableId);
+        if (!table) return false;
+        
+        return table.updateColumnsOrder(orderedColumnIds);
     }
 }

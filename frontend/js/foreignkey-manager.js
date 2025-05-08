@@ -63,6 +63,11 @@ class ForeignKeyManager {
         // Sauvegarder la valeur actuelle
         const currentValue = columnSelect.value;
         
+        // Rechercher la valeur dans les attributs data du parent si pas de valeur actuelle
+        const columnRow = tableSelect.closest('.column-row');
+        const savedReferenceColumn = columnRow ? columnRow.dataset.referenceColumn : null;
+        const valueToRestore = currentValue || savedReferenceColumn;
+        
         // Réinitialiser et activer le sélecteur
         columnSelect.innerHTML = '<option value="">--Sélectionner une colonne--</option>';
         columnSelect.disabled = false;
@@ -78,8 +83,13 @@ class ForeignKeyManager {
             });
         
         // Restaurer la valeur si elle existe toujours
-        if (currentValue && columnSelect.querySelector(`option[value="${currentValue}"]`)) {
-            columnSelect.value = currentValue;
+        if (valueToRestore && columnSelect.querySelector(`option[value="${valueToRestore}"]`)) {
+            columnSelect.value = valueToRestore;
+            
+            // Si nous avons utilisé la valeur sauvegardée, effacer l'attribut data
+            if (columnRow && valueToRestore === savedReferenceColumn) {
+                delete columnRow.dataset.referenceColumn;
+            }
         }
     }
 

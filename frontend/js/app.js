@@ -26,6 +26,7 @@ class App {
         // Initialiser les gestionnaires
         this.sqlGenerator = new SQLGenerator(this.schema);
         this.foreignKeyManager = new ForeignKeyManager(this.schema, this);
+        this.columnDragHandler = new ColumnDragHandler(this.schema);
         
         // Récupérer l'élément canvas pour le renderer
         const canvas = document.getElementById('canvas');
@@ -149,6 +150,12 @@ class App {
         // Mettre à jour les options de clé étrangère
         this.foreignKeyManager.updateForeignKeyOptions(form);
         
+        // Configurer le glisser-déposer pour réorganiser les colonnes
+        const tableId = this.currentEditingTable ? this.currentEditingTable.id : null;
+        setTimeout(() => {
+            this.columnDragHandler.setupColumnDragInModal(columnsContainer, tableId);
+        }, 100);
+        
         // Afficher le modal
         this.tableModal.style.display = 'block';
     }
@@ -200,17 +207,13 @@ class App {
             primaryKeyCheckbox.checked = column.isPrimaryKey;
             foreignKeyCheckbox.checked = column.isForeignKey;
             
+            // Stocker les références pour une utilisation ultérieure
             if (column.isForeignKey) {
                 foreignKeyOptions.classList.remove('hidden');
                 
-                // Les options de référence seront mises à jour plus tard
-                // par updateForeignKeyOptions
-                if (column.referenceTable) {
-                    referenceTable.value = column.referenceTable;
-                }
-                if (column.referenceColumn) {
-                    referenceColumn.value = column.referenceColumn;
-                }
+                // Stocker les références dans des attributs data pour les récupérer après la mise à jour des options
+                columnRow.dataset.referenceTable = column.referenceTable || '';
+                columnRow.dataset.referenceColumn = column.referenceColumn || '';
             }
             
             // Stocker l'ID de la colonne pour l'édition
@@ -220,13 +223,30 @@ class App {
         // Ajouter la ligne au conteneur
         columnsContainer.appendChild(columnRow);
         
-        // Mettre à jour les options de clé étrangère si nécessaire
-        if (column && column.isForeignKey) {
-            setTimeout(() => {
-                this.foreignKeyManager.updateForeignKeyOptions(columnRow);
-                this.foreignKeyManager.updateReferenceColumns(referenceTable, referenceColumn);
-            }, 0);
-        }
+        // Mettre à jour les options de clé étrangère
+        setTimeout(() => {
+            this.foreignKeyManager.updateForeignKeyOptions(columnRow);
+            
+            // Si c'est une clé étrangère existante, restaurer les valeurs sélectionnées
+            if (column && column.isForeignKey) {
+                setTimeout(() => {
+                    // Maintenant que les options sont mises à jour, sélectionner les bonnes valeurs
+                    if (columnRow.dataset.referenceTable) {
+                        referenceTable.value = columnRow.dataset.referenceTable;
+                        // Déclencher la mise à jour des colonnes de référence
+                        const event = new Event('change');
+                        referenceTable.dispatchEvent(event);
+                        
+                        // Attendre que les colonnes soient mises à jour puis sélectionner la colonne de référence
+                        setTimeout(() => {
+                            if (columnRow.dataset.referenceColumn) {
+                                referenceColumn.value = columnRow.dataset.referenceColumn;
+                            }
+                        }, 50);
+                    }
+                }, 50);
+            }
+        }, 0);
     }
     
     // Enregistre la table à partir du formulaire
@@ -244,6 +264,10 @@ class App {
         let hasColumn = false;
         let hasPrimaryKey = false;
         
+        // Variable pour suivre si une clé étrangère manque de référence
+        let missingForeignKeyReference = false;
+        
+        // Utiliser le gestionnaire de glisser-déposer pour récupérer les colonnes dans leur ordre actuel
         columnRows.forEach(row => {
             const name = row.querySelector('.column-name').value.trim();
             if (name) {
@@ -260,8 +284,8 @@ class App {
                     referenceColumn = row.querySelector('.reference-column').value;
                     
                     if (!referenceTable || !referenceColumn) {
-                        alert('Veuillez sélectionner une table et une colonne de référence pour chaque clé étrangère.');
-                        return;
+                        missingForeignKeyReference = true;
+                        // Ne pas sortir de la fonction ici, continuer pour collecter toutes les erreurs
                     }
                 }
                 
@@ -281,6 +305,12 @@ class App {
             }
         });
         
+        // Vérifier s'il manque des références de clés étrangères
+        if (missingForeignKeyReference) {
+            alert('Veuillez sélectionner une table et une colonne de référence pour chaque clé étrangère.');
+            return;
+        }
+        
         if (!hasColumn) {
             alert('Veuillez ajouter au moins une colonne.');
             return;
@@ -295,6 +325,17 @@ class App {
             table = this.currentEditingTable;
             const oldName = table.name;
             table.name = tableName;
+            
+            // Mémoriser les colonnes et relations à préserver avant la suppression
+            const columnsToKeep = [];
+            columns.forEach(newCol => {
+                if (newCol.id) {
+                    const existingColumn = table.columns.find(col => col.id === newCol.id);
+                    if (existingColumn) {
+                        columnsToKeep.push(newCol.id);
+                    }
+                }
+            });
             
             // Supprimer toutes les anciennes colonnes et relations
             while (table.columns.length > 0) {
