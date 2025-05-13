@@ -178,7 +178,16 @@ class App {
         const referenceColumn = columnRow.querySelector('.reference-column');
         const removeBtn = columnRow.querySelector('.remove-column-btn');
         
-        // Configurer les événements pour cette ligne
+        // Options avancées
+        const advancedOptionsToggle = columnRow.querySelector('.toggle-advanced-btn');
+        const advancedOptionsDiv = columnRow.querySelector('.column-advanced-options');
+        const columnSize = columnRow.querySelector('.column-size');
+        const columnPrecision = columnRow.querySelector('.column-precision');
+        const notNullCheckbox = columnRow.querySelector('.not-null');
+        const defaultCheckbox = columnRow.querySelector('.has-default');
+        const defaultValue = columnRow.querySelector('.default-value');
+        
+        // Configurer les événements pour les options de colonne de base
         foreignKeyCheckbox.addEventListener('change', () => {
             if (foreignKeyCheckbox.checked) {
                 foreignKeyOptions.classList.remove('hidden');
@@ -192,6 +201,57 @@ class App {
             this.foreignKeyManager.updateReferenceColumns(referenceTable, referenceColumn);
         });
         
+        // Configurer les événements pour les options avancées
+        advancedOptionsToggle.addEventListener('click', () => {
+            advancedOptionsDiv.classList.toggle('visible');
+            advancedOptionsToggle.classList.toggle('active');
+            
+            // Ajuster la hauteur du conteneur pour mieux voir l'animation
+            if (advancedOptionsDiv.classList.contains('visible')) {
+                columnsContainer.style.scrollBehavior = 'smooth';
+            }
+        });
+        
+        // Gérer les champs de taille/précision en fonction du type sélectionné
+        columnType.addEventListener('change', () => {
+            const type = columnType.value;
+            
+            // Activer/désactiver les champs de taille en fonction du type
+            if (['VARCHAR', 'CHAR', 'DECIMAL', 'NUMERIC'].includes(type)) {
+                columnSize.removeAttribute('disabled');
+                columnSize.placeholder = type === 'VARCHAR' || type === 'CHAR' ? 'Taille' : 'Précision';
+                
+                if (type === 'DECIMAL' || type === 'NUMERIC') {
+                    columnPrecision.removeAttribute('disabled');
+                    columnPrecision.placeholder = 'Échelle';
+                } else {
+                    columnPrecision.setAttribute('disabled', 'disabled');
+                    columnPrecision.placeholder = '';
+                }
+            } else {
+                columnSize.setAttribute('disabled', 'disabled');
+                columnSize.placeholder = '';
+                columnPrecision.setAttribute('disabled', 'disabled');
+                columnPrecision.placeholder = '';
+            }
+            
+            // Gestion automatique de la clé primaire pour les types SERIAL
+            if (type.includes('SERIAL')) {
+                primaryKeyCheckbox.checked = true;
+                notNullCheckbox.checked = true;
+            }
+        });
+        
+        // Gestion du champ de valeur par défaut
+        defaultCheckbox.addEventListener('change', () => {
+            if (defaultCheckbox.checked) {
+                defaultValue.removeAttribute('disabled');
+            } else {
+                defaultValue.setAttribute('disabled', 'disabled');
+                defaultValue.value = '';
+            }
+        });
+        
         removeBtn.addEventListener('click', () => {
             if (columnsContainer.children.length > 1) {
                 columnsContainer.removeChild(columnRow);
@@ -203,9 +263,47 @@ class App {
         // Si on édite une colonne existante, remplir les champs
         if (column) {
             columnName.value = column.name;
-            columnType.value = column.type;
+            
+            // Gestion du type et options de taille
+            const typeBase = column.type.split('(')[0].trim(); // Récupérer le type de base
+            let typeParams = '';
+            
+            // Extraire les paramètres de taille ou précision s'ils existent
+            if (column.type.includes('(')) {
+                typeParams = column.type.match(/\((.*)\)/)[1];
+            }
+            
+            columnType.value = typeBase;
+            
+            // Définir les options de taille/précision si présentes
+            if (typeParams) {
+                if (typeParams.includes(',')) {
+                    // Cas DECIMAL/NUMERIC avec précision et échelle
+                    const [precision, scale] = typeParams.split(',');
+                    columnSize.value = precision.trim();
+                    columnPrecision.value = scale.trim();
+                } else {
+                    // Cas simple (VARCHAR, CHAR)
+                    columnSize.value = typeParams;
+                }
+                
+                // Activer les champs correspondants
+                columnType.dispatchEvent(new Event('change'));
+            }
+            
             primaryKeyCheckbox.checked = column.isPrimaryKey;
             foreignKeyCheckbox.checked = column.isForeignKey;
+            
+            // Définir les options avancées si disponibles
+            if (column.notNull) {
+                notNullCheckbox.checked = true;
+            }
+            
+            if (column.defaultValue) {
+                defaultCheckbox.checked = true;
+                defaultValue.value = column.defaultValue;
+                defaultValue.removeAttribute('disabled');
+            }
             
             // Stocker les références pour une utilisation ultérieure
             if (column.isForeignKey) {
@@ -272,9 +370,27 @@ class App {
             const name = row.querySelector('.column-name').value.trim();
             if (name) {
                 hasColumn = true;
-                const type = row.querySelector('.column-type').value;
+                let type = row.querySelector('.column-type').value;
                 const isPrimaryKey = row.querySelector('.primary-key').checked;
                 const isForeignKey = row.querySelector('.foreign-key').checked;
+                
+                // Récupérer les options avancées
+                const columnSize = row.querySelector('.column-size');
+                const columnPrecision = row.querySelector('.column-precision');
+                const notNull = row.querySelector('.not-null').checked;
+                const hasDefault = row.querySelector('.has-default').checked;
+                const defaultValue = hasDefault ? row.querySelector('.default-value').value : null;
+                
+                // Construire le type complet avec les tailles/précisions
+                if (!columnSize.disabled && columnSize.value) {
+                    if (!columnPrecision.disabled && columnPrecision.value) {
+                        // Cas DECIMAL/NUMERIC avec précision et échelle
+                        type = `${type}(${columnSize.value},${columnPrecision.value})`;
+                    } else {
+                        // Cas simple (VARCHAR, CHAR)
+                        type = `${type}(${columnSize.value})`;
+                    }
+                }
                 
                 let referenceTable = null;
                 let referenceColumn = null;
@@ -300,7 +416,9 @@ class App {
                     isPrimaryKey,
                     isForeignKey,
                     referenceTable,
-                    referenceColumn
+                    referenceColumn,
+                    notNull,
+                    defaultValue
                 });
             }
         });
@@ -368,7 +486,9 @@ class App {
                 columnData.isPrimaryKey,
                 columnData.isForeignKey,
                 columnData.referenceTable,
-                columnData.referenceColumn
+                columnData.referenceColumn,
+                columnData.notNull,
+                columnData.defaultValue
             );
         });
         

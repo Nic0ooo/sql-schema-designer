@@ -41,6 +41,33 @@ class SQLGenerator {
                     colDef += ' PRIMARY KEY';
                 }
                 
+                // Ajouter la contrainte NOT NULL si définie
+                if (column.notNull && !column.isPrimaryKey) { // Les clés primaires sont déjà NOT NULL
+                    colDef += ' NOT NULL';
+                }
+                
+                // Ajouter la valeur par défaut si définie
+                if (column.defaultValue) {
+                    // Déterminer si la valeur par défaut a besoin de guillemets
+                    let defaultVal = column.defaultValue;
+                    
+                    // Gérer les valeurs spéciales comme CURRENT_TIMESTAMP, NOW(), etc.
+                    const specialDefaults = ['CURRENT_TIMESTAMP', 'NOW()', 'CURRENT_DATE', 'CURRENT_TIME', 'NULL', 'TRUE', 'FALSE'];
+                    const isSpecial = specialDefaults.some(sd => defaultVal.toUpperCase().includes(sd));
+                    
+                    // Si ce n'est pas une valeur spéciale et que c'est un type de texte, ajouter des guillemets simples
+                    if (!isSpecial && 
+                        (column.type.toUpperCase().includes('VARCHAR') || 
+                        column.type.toUpperCase().includes('CHAR') ||
+                        column.type.toUpperCase().includes('TEXT') ||
+                        column.type.toUpperCase().includes('DATE') ||
+                        column.type.toUpperCase().includes('TIME'))) {
+                        defaultVal = `'${defaultVal}'`;
+                    }
+                    
+                    colDef += ` DEFAULT ${defaultVal}`;
+                }
+                
                 return colDef;
             });
             

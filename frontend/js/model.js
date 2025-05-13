@@ -3,7 +3,7 @@
  */
 
 class Column {
-    constructor(id, name, type, isPrimaryKey = false, isForeignKey = false, referenceTable = null, referenceColumn = null) {
+    constructor(id, name, type, isPrimaryKey = false, isForeignKey = false, referenceTable = null, referenceColumn = null, notNull = false, defaultValue = null) {
         this.id = id;
         this.name = name;
         this.type = type;
@@ -11,6 +11,8 @@ class Column {
         this.isForeignKey = isForeignKey;
         this.referenceTable = referenceTable;
         this.referenceColumn = referenceColumn;
+        this.notNull = notNull;
+        this.defaultValue = defaultValue;
     }
 }
 
@@ -124,12 +126,12 @@ class Schema {
         delete this.tables[tableId];
     }
 
-    createColumn(tableId, name, type, isPrimaryKey = false, isForeignKey = false, referenceTable = null, referenceColumn = null) {
+    createColumn(tableId, name, type, isPrimaryKey = false, isForeignKey = false, referenceTable = null, referenceColumn = null, notNull = false, defaultValue = null) {
         const table = this.getTable(tableId);
         if (!table) return null;
         
         const id = `column_${this.nextColumnId++}`;
-        const column = new Column(id, name, type, isPrimaryKey, isForeignKey, referenceTable, referenceColumn);
+        const column = new Column(id, name, type, isPrimaryKey, isForeignKey, referenceTable, referenceColumn, notNull, defaultValue);
         table.addColumn(column);
         
         // Si c'est une clé étrangère, créer automatiquement une relation

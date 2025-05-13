@@ -414,13 +414,15 @@ input[type="text"]:focus, select:focus, textarea:focus {
 
 .column-row {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem;
+    padding: 0.8rem;
     background-color: #f9f9f9;
     border-radius: 4px;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.8rem;
     transition: background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+    position: relative;
 }
 
 /* Style de la poignée de glisser-déposer */
@@ -462,9 +464,88 @@ input[type="text"]:focus, select:focus, textarea:focus {
     flex: 1;
 }
 
+/* Options de colonnes */
 .column-options {
     display: flex;
     gap: 1rem;
+    align-items: center;
+}
+
+/* Options avancées pour les colonnes */
+.column-advanced-options {
+    display: none;
+    width: 100%;
+    margin-top: 0.8rem;
+    padding-top: 0.8rem;
+    border-top: 1px dashed #ddd;
+    animation: fadeIn 0.3s ease;
+}
+
+.column-advanced-options.visible {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    justify-content: space-between;
+}
+
+.column-size-options {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.column-size, .column-precision {
+    width: 80px;
+    padding: 0.4rem;
+    font-size: 0.85rem;
+}
+
+.column-constraints {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.column-constraints label {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.85rem;
+}
+
+.default-value {
+    width: 120px;
+    padding: 0.3rem;
+    font-size: 0.85rem;
+    margin-left: 0.25rem;
+}
+
+.toggle-advanced-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    padding: 0;
+}
+
+.toggle-advanced-btn:hover {
+    background-color: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.toggle-advanced-btn.active {
+    background-color: var(--primary-color);
+    color: white;
+    transform: rotate(180deg);
 }
 
 .column-options label {

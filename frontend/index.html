@@ -117,25 +117,59 @@
                 </div>
                 <div class="column-field">
                     <select class="column-type">
-                        <option value="INTEGER">INTEGER</option>
-                        <option value="BIGINT">BIGINT</option>
-                        <option value="SMALLINT">SMALLINT</option>
-                        <option value="DECIMAL">DECIMAL</option>
-                        <option value="NUMERIC">NUMERIC</option>
-                        <option value="REAL">REAL</option>
-                        <option value="DOUBLE PRECISION">DOUBLE PRECISION</option>
-                        <option value="VARCHAR">VARCHAR</option>
-                        <option value="CHAR">CHAR</option>
-                        <option value="TEXT">TEXT</option>
-                        <option value="DATE">DATE</option>
-                        <option value="TIME">TIME</option>
-                        <option value="TIMESTAMP">TIMESTAMP</option>
-                        <option value="BOOLEAN">BOOLEAN</option>
-                        <option value="UUID">UUID</option>
-                        <option value="JSON">JSON</option>
-                        <option value="JSONB">JSONB</option>
+                        <optgroup label="Entiers">
+                            <option value="INTEGER">INTEGER</option>
+                            <option value="BIGINT">BIGINT</option>
+                            <option value="SMALLINT">SMALLINT</option>
+                        </optgroup>
+                        <optgroup label="Numériques">
+                            <option value="DECIMAL">DECIMAL</option>
+                            <option value="NUMERIC">NUMERIC</option>
+                            <option value="REAL">REAL</option>
+                            <option value="DOUBLE PRECISION">DOUBLE PRECISION</option>
+                        </optgroup>
+                        <optgroup label="Texte">
+                            <option value="VARCHAR">VARCHAR</option>
+                            <option value="CHAR">CHAR</option>
+                            <option value="TEXT">TEXT</option>
+                        </optgroup>
+                        <optgroup label="Dates et Heures">
+                            <option value="DATE">DATE</option>
+                            <option value="TIME">TIME</option>
+                            <option value="TIMESTAMP">TIMESTAMP</option>
+                        </optgroup>
+                        <optgroup label="Autres">
+                            <option value="BOOLEAN">BOOLEAN</option>
+                            <option value="UUID">UUID</option>
+                            <option value="JSON">JSON</option>
+                            <option value="JSONB">JSONB</option>
+                        </optgroup>
+                        <optgroup label="Séries">
+                            <option value="SERIAL">SERIAL</option>
+                            <option value="BIGSERIAL">BIGSERIAL</option>
+                            <option value="SMALLSERIAL">SMALLSERIAL</option>
+                        </optgroup>
                     </select>
                 </div>
+                
+                <!-- Options de colonne avancées -->
+                <div class="column-advanced-options">
+                    <div class="column-size-options">
+                        <input type="text" class="column-size" placeholder="Taille" title="Ex: 255 pour VARCHAR(255)">
+                        <input type="text" class="column-precision" placeholder="Précision" title="Ex: 10,2 pour DECIMAL(10,2)">
+                    </div>
+                    
+                    <div class="column-constraints">
+                        <label title="La colonne ne peut pas être nulle">
+                            <input type="checkbox" class="not-null"> NOT NULL
+                        </label>
+                        <label title="Valeur par défaut">
+                            <input type="checkbox" class="has-default"> DEFAULT
+                            <input type="text" class="default-value" placeholder="Valeur" disabled>
+                        </label>
+                    </div>
+                </div>
+                
                 <div class="column-options">
                     <label>
                         <input type="checkbox" class="primary-key"> Clé Primaire
@@ -143,7 +177,9 @@
                     <label>
                         <input type="checkbox" class="foreign-key"> Clé Étrangère
                     </label>
+                    <button type="button" class="toggle-advanced-btn" title="Options avancées">⚙️</button>
                 </div>
+                
                 <div class="foreign-key-options hidden">
                     <select class="reference-table">
                         <option value="">--Sélectionner une table--</option>
